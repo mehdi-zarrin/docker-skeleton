@@ -1,0 +1,48 @@
+version: '3.9'
+
+networks:
+  default:
+    name: ${NETWORK_NAME}
+
+services:
+  webserver-service:
+    image: ${NGINX_IMAGE}
+    container_name: ${NGINX_CONTAINER_NAME}
+    ports:
+      - ${APP_PORT}:80
+    volumes:
+      - ./docker-files/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ${PROJECT_FILES_DIR}:/var/www/project
+    depends_on:
+      - database-service
+      - fpm-service
+    networks:
+      - default
+
+  database-service:
+    image: ${MYSQL_IMAGE}
+    container_name: ${MYSQL_CONTAINER_NAME}
+    volumes:
+      - ./docker-files/mysql:/var/lib/mysql
+    ports:
+       - ${DB_PORT}:3306
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    networks:
+      - default
+
+  fpm-service:
+    build:
+      context: .
+      dockerfile: ./docker-files/php/DockerFile
+    container_name: ${FPM_CONTAINER_NAME}
+    ports:
+      - ${FPM_PORT}:9000
+    volumes:
+      - ${PROJECT_FILES_DIR}:/var/www/project
+      - ./docker-files/php/conf.d/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+    networks:
+      - default
